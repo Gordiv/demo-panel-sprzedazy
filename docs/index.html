@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Panel sprzedaży: demo dashboardu analityki zamówień na danych przykładowych." />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Panel sprzedaży</title>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('panel-theme');
+          if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {}
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-BlokZWtI.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-XKyaHtl9.js">
+    <link rel="modulepreload" crossorigin href="./assets/react-C1iE8mnY.js">
+    <link rel="modulepreload" crossorigin href="./assets/charts-N3TXMEWa.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-D_ISa1Jq.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
