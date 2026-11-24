@@ -63,7 +63,9 @@ describe('ordersToCsv', () => {
     {
       id: 'ZAM-2026-00123',
       date: '2026-03-07',
+      time: '09:05',
       client: 'Jan "Janek" Kowalski; ',
+      product: 'Lampa\nstojąca',
       category: 'Dom i ogród',
       channel: 'Sklep online',
       amount: 1234.5,
@@ -74,8 +76,10 @@ describe('ordersToCsv', () => {
   it('writes a Polish header and Excel-friendly values', () => {
     const csv = ordersToCsv(orders);
     const lines = csv.split('\r\n');
-    expect(lines[0]).toBe('Numer;Data;Klient;Kategoria;Kanał;Kwota (zł);Status');
-    expect(lines[1]).toBe('ZAM-2026-00123;07.03.2026;"Jan ""Janek"" Kowalski; ";Dom i ogród;Sklep online;1234,50;Zwrócone');
+    expect(lines[0]).toBe('Numer;Data;Godzina;Klient;Produkt;Kategoria;Kanał;Kwota (zł);Status');
+    expect(lines[1]).toBe(
+      'ZAM-2026-00123;07.03.2026;09:05;"Jan ""Janek"" Kowalski; ";"Lampa\nstojąca";Dom i ogród;Sklep online;1234,50;Zwrócone',
+    );
     expect(csv.endsWith('\r\n')).toBe(true);
   });
 
@@ -86,6 +90,6 @@ describe('ordersToCsv', () => {
   });
 
   it('writes only the header for an empty list', () => {
-    expect(ordersToCsv([])).toBe('Numer;Data;Klient;Kategoria;Kanał;Kwota (zł);Status\r\n');
+    expect(ordersToCsv([])).toBe('Numer;Data;Godzina;Klient;Produkt;Kategoria;Kanał;Kwota (zł);Status\r\n');
   });
 });

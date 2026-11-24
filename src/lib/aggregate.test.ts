@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { Order } from '../data/types';
+import { order } from '../test/order';
 import {
   computeKpis,
   computeTotals,
   filterOrders,
+  bucketSeries,
   getPeriods,
-  monthlySeries,
   normalizeText,
   paginate,
   percentChange,
@@ -14,23 +14,10 @@ import {
   searchOrders,
   sortOrders,
   sumRevenue,
+  timeSeries,
 } from './aggregate';
-import { addMonths, monthRange } from './months';
+import { addDays, addMonths, daysBetween, lastDayOf, monthRange, weekdayOf } from './months';
 
-let seq = 0;
-function order(partial: Partial<Order>): Order {
-  seq += 1;
-  return {
-    id: `ZAM-2026-${String(seq).padStart(5, '0')}`,
-    date: '2026-10-15',
-    client: 'Anna Nowak',
-    category: 'Moda',
-    channel: 'Sklep online',
-    amount: 100,
-    status: 'Zrealizowane',
-    ...partial,
-  };
-}
 
 describe('months', () => {
   it('adds months across year boundaries', () => {
@@ -41,6 +28,15 @@ describe('months', () => {
 
   it('lists an inclusive month range', () => {
     expect(monthRange('2025-11', '2026-02')).toEqual(['2025-11', '2025-12', '2026-01', '2026-02']);
+  });
+
+  it('works with days, month ends and weekdays', () => {
+    expect(addDays('2026-02-27', 3)).toBe('2026-03-02');
+    expect(daysBetween('2025-12-30', '2026-01-02')).toBe(3);
+    expect(lastDayOf('2024-02')).toBe('2024-02-29');
+    expect(lastDayOf('2026-12')).toBe('2026-12-31');
+    expect(weekdayOf('2026-10-31')).toBe(5); // Saturday, Monday = 0
+    expect(weekdayOf('2026-11-02')).toBe(0);
   });
 });
 
@@ -158,25 +154,59 @@ describe('totals and KPIs', () => {
   });
 });
 
-describe('monthlySeries', () => {
+describe('bucketSeries and timeSeries', () => {
   const periods = getPeriods('2026-10', 3);
 
   it('returns every month of the period, also months without orders', () => {
-    const series = monthlySeries([order({ date: '2026-09-10', amount: 40 })], [], periods);
-    expect(series.map((p) => p.month)).toEqual(['2026-08', '2026-09', '2026-10']);
+    const series = timeSeries([order({ date: '2026-09-10', amount: 40 })], [], periods, 'month');
+    expect(series.map((p) => p.start)).toEqual(['2026-08-01', '2026-09-01', '2026-10-01']);
+    expect(series.map((p) => p.end)).toEqual(['2026-08-31', '2026-09-30', '2026-10-31']);
     expect(series.map((p) => p.revenue)).toEqual([0, 40, 0]);
     expect(series.map((p) => p.previousRevenue)).toEqual([0, 0, 0]);
   });
 
   it('aligns previous period months by position', () => {
-    const series = monthlySeries(
+    const series = timeSeries(
       [order({ date: '2026-08-02', amount: 10 })],
       [order({ date: '2026-05-20', amount: 7 }), order({ date: '2026-07-01', amount: 3 })],
       periods,
+      'month',
     );
-    expect(series.map((p) => p.previousMonth)).toEqual(['2026-05', '2026-06', '2026-07']);
+    expect(series.map((p) => p.previousStart)).toEqual(['2026-05-01', '2026-06-01', '2026-07-01']);
     expect(series.map((p) => p.previousRevenue)).toEqual([7, 0, 3]);
     expect(series[0]?.orders).toBe(1);
+  });
+
+  it('splits a period into 7-day blocks with a shorter last block', () => {
+    const buckets = bucketSeries(
+      [
+        order({ date: '2026-08-01', amount: 5 }),
+        order({ date: '2026-08-07', amount: 5 }),
+        order({ date: '2026-08-08', amount: 1, status: 'Zwrócone' }),
+        order({ date: '2026-10-31', amount: 2 }),
+      ],
+      periods.current,
+      'week',
+    );
+    // 92 days -> 13 full weeks and one day.
+    expect(buckets).toHaveLength(14);
+    expect(buckets[0]).toMatchObject({ start: '2026-08-01', end: '2026-08-07', revenue: 10, orders: 2, paidOrders: 2 });
+    expect(buckets[1]).toMatchObject({ start: '2026-08-08', revenue: 0, orders: 1, returns: 1, paidOrders: 0 });
+    expect(buckets[13]).toMatchObject({ start: '2026-10-31', end: '2026-10-31', revenue: 2 });
+  });
+
+  it('marks positions the previous period does not have', () => {
+    const six = getPeriods('2026-10', 6);
+    // May-Oct has 184 days (27 blocks), Nov-Apr only 181 (26 blocks).
+    const series = timeSeries([], [], six, 'week');
+    expect(series).toHaveLength(27);
+    expect(series[26]?.previousRevenue).toBeNull();
+    expect(series[25]?.previousRevenue).toBe(0);
+  });
+
+  it('ignores orders outside the span', () => {
+    const buckets = bucketSeries([order({ date: '2026-07-31' }), order({ date: '2026-11-01' })], periods.current, 'month');
+    expect(buckets.every((b) => b.orders === 0)).toBe(true);
   });
 });
 

@@ -19,7 +19,11 @@ export interface Order {
   id: string;
   /** Calendar date as YYYY-MM-DD (no time zone involved) */
   date: string;
+  /** Local time as HH:MM */
+  time: string;
   client: string;
+  /** Main product in the basket */
+  product: string;
   category: Category;
   channel: Channel;
   /** Order value in PLN, rounded to grosze */

@@ -10,8 +10,51 @@ import {
   formatMonthShort,
   formatOrderCount,
   formatPercent,
+  formatBucketLabel,
+  formatBucketTick,
+  formatDayRange,
+  formatHourBlock,
+  formatPercentMagnitude,
+  formatPointsMagnitude,
+  formatRelativeDay,
+  formatWholePercent,
   pluralPl,
 } from './format';
+
+describe('bucket, hour and relative labels', () => {
+  const p = (s: string) => s.replace(/[  ]/g, ' ');
+  it('formats day ranges inside and across months', () => {
+    expect(p(formatDayRange('2026-08-03', '2026-08-09'))).toBe('3–9 sie 2026');
+    expect(p(formatDayRange('2026-09-28', '2026-10-04'))).toBe('28 wrz – 4 paź 2026');
+    expect(p(formatDayRange('2026-10-31', '2026-10-31'))).toBe('31 paź 2026');
+  });
+
+  it('labels buckets by granularity', () => {
+    expect(formatBucketTick('2026-03-01', 'month')).toBe('mar');
+    expect(p(formatBucketTick('2026-08-08', 'week'))).toBe('8 sie');
+    expect(formatBucketLabel('2026-03-01', '2026-03-31', 'month')).toBe('marzec 2026');
+  });
+
+  it('formats hour blocks', () => {
+    expect(formatHourBlock(0, 2)).toBe('00:00–02:00');
+    expect(formatHourBlock(9, 2)).toBe('18:00–20:00');
+    expect(formatHourBlock(11, 2)).toBe('22:00–24:00');
+  });
+
+  it('describes days relative to the data end date', () => {
+    expect(formatRelativeDay('2026-10-31', '2026-10-31')).toBe('dziś');
+    expect(formatRelativeDay('2026-10-30', '2026-10-31')).toBe('wczoraj');
+    expect(formatRelativeDay('2026-10-27', '2026-10-31')).toBe('4 dni temu');
+    expect(formatRelativeDay('2026-10-01', '2026-10-31')).toBe('01.10.2026');
+  });
+
+  it('formats animated counter values', () => {
+    expect(p(formatPercentMagnitude(-0.125))).toBe('12,5%');
+    expect(formatPointsMagnitude(-1.25)).toBe('1,3 pp.');
+    expect(formatWholePercent(0.964)).toBe('96%');
+    expect(formatWholePercent(null)).toBe('—');
+  });
+});
 
 // Intl uses (narrow) no-break spaces in pl-PL; compare with plain spaces.
 const plain = (s: string) => s.replace(/[  ]/g, ' ');

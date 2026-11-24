@@ -25,6 +25,7 @@ const dayFormat = new Intl.DateTimeFormat(LOCALE, {
   year: 'numeric',
   timeZone: 'UTC',
 });
+const dayMonth = new Intl.DateTimeFormat(LOCALE, { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const plural = new Intl.PluralRules(LOCALE);
 
 export const EM_DASH = '—';
@@ -80,6 +81,58 @@ export function formatMonthName(month: string): string {
   return monthNameOnly.format(toUtcDate(`${month}-01`));
 }
 
+/** "2026-08-03" -> "3 sie" */
+export function formatDayMonth(isoDate: string): string {
+  return dayMonth.format(toUtcDate(isoDate));
+}
+
+/** "3–9 sie 2026", or "29 wrz – 5 paź 2026" across months */
+export function formatDayRange(start: string, end: string): string {
+  const year = end.slice(0, 4);
+  if (start === end) return `${formatDayMonth(start)} ${year}`;
+  if (start.slice(0, 7) === end.slice(0, 7)) {
+    return `${Number(start.slice(8, 10))}–${formatDayMonth(end)} ${year}`;
+  }
+  return `${formatDayMonth(start)} – ${formatDayMonth(end)} ${year}`;
+}
+
+/** Short axis label for a bucket that starts on `start`. */
+export function formatBucketTick(start: string, granularity: 'week' | 'month'): string {
+  return granularity === 'month' ? formatMonthName(start.slice(0, 7)) : formatDayMonth(start);
+}
+
+/** Full label for a bucket, e.g. "listopad 2025" or "3–9 sie 2026". */
+export function formatBucketLabel(start: string, end: string, granularity: 'week' | 'month'): string {
+  return granularity === 'month' ? formatMonthLong(start.slice(0, 7)) : formatDayRange(start, end);
+}
+
+export const WEEKDAYS_SHORT = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'] as const;
+export const WEEKDAYS_LONG = [
+  'poniedziałek',
+  'wtorek',
+  'środa',
+  'czwartek',
+  'piątek',
+  'sobota',
+  'niedziela',
+] as const;
+
+/** Block 9 of 2 hours -> "18:00–20:00" */
+export function formatHourBlock(block: number, size: number): string {
+  const from = block * size;
+  const to = from + size;
+  return `${String(from).padStart(2, '0')}:00–${String(to === 24 ? 24 : to).padStart(2, '0')}:00`;
+}
+
+/** Day relative to a reference "today": "dziś", "wczoraj", "3 dni temu", older ones as a date. */
+export function formatRelativeDay(date: string, today: string): string {
+  const diff = Math.round((toUtcDate(today).getTime() - toUtcDate(date).getTime()) / 86_400_000);
+  if (diff === 0) return 'dziś';
+  if (diff === 1) return 'wczoraj';
+  if (diff > 1 && diff < 7) return `${diff} dni temu`;
+  return formatDate(date);
+}
+
 /** Polish plural forms: (1) zamówienie, (2-4) zamówienia, (5+) zamówień */
 export function pluralPl(count: number, one: string, few: string, many: string): string {
   const rule = plural.select(count);
@@ -100,6 +153,15 @@ export interface DeltaText {
   /** Full sentence for screen readers */
   label: string;
 }
+
+/** Stable formatters for animated counters (they receive in-between values). */
+export const formatPercentMagnitude = (v: number | null): string =>
+  v === null ? EM_DASH : percent.format(Math.abs(v));
+export const formatPointsMagnitude = (v: number | null): string =>
+  v === null ? EM_DASH : `${oneDecimal.format(Math.abs(v))} pp.`;
+export const formatCompactOrDash = (v: number | null): string => (v === null ? EM_DASH : formatCurrencyCompact(v));
+export const formatWholePercent = (v: number | null): string =>
+  v === null ? EM_DASH : `${integer.format(Math.round(v * 100))}%`;
 
 /** Visible and spoken text for a change against the previous period. */
 export function formatDelta(delta: Delta | null): DeltaText | null {

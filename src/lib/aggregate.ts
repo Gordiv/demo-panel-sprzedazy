@@ -1,5 +1,5 @@
 import { CATEGORIES, CHANNELS, type Category, type Channel, type Order } from '../data/types';
-import { addMonths, monthOf, monthRange } from './months';
+import { addDays, addMonths, daysBetween, firstDayOf, lastDayOf, monthOf, monthRange } from './months';
 
 export const PERIODS = [3, 6, 12] as const;
 export type PeriodMonths = (typeof PERIODS)[number];
@@ -158,44 +158,90 @@ export function computeKpis(current: readonly Order[], previous: readonly Order[
   };
 }
 
-export interface MonthPoint {
-  month: string;
+export type Granularity = 'week' | 'month';
+
+export interface Bucket {
+  /** First day of the bucket (YYYY-MM-DD) */
+  start: string;
+  /** Last day of the bucket, inclusive */
+  end: string;
   revenue: number;
   orders: number;
-  /** Month at the same position in the previous period */
-  previousMonth: string;
-  previousRevenue: number;
+  paidOrders: number;
+  returns: number;
 }
 
-/** Revenue per month for the current period, aligned with the previous period month by month. */
-export function monthlySeries(
+/** First and last calendar day of a month span. */
+export function spanDays(span: MonthSpan): { first: string; last: string } {
+  return { first: firstDayOf(span.start), last: lastDayOf(span.end) };
+}
+
+/**
+ * Splits a period into calendar months or 7-day blocks counted from its first
+ * day (the last block may be shorter) and sums the orders that fall in each.
+ */
+export function bucketSeries(orders: readonly Order[], span: MonthSpan, granularity: Granularity): Bucket[] {
+  const { first, last } = spanDays(span);
+  const buckets: Bucket[] = [];
+  const blank = (start: string, end: string): Bucket => ({
+    start,
+    end,
+    revenue: 0,
+    orders: 0,
+    paidOrders: 0,
+    returns: 0,
+  });
+
+  const months = monthRange(span.start, span.end);
+  if (granularity === 'month') {
+    for (const m of months) buckets.push(blank(firstDayOf(m), lastDayOf(m)));
+  } else {
+    const total = daysBetween(first, last) + 1;
+    for (let d = 0; d < total; d += 7) buckets.push(blank(addDays(first, d), addDays(first, Math.min(d + 6, total - 1))));
+  }
+
+  const grosze = buckets.map(() => 0);
+  for (const o of orders) {
+    if (o.date < first || o.date > last) continue;
+    const i =
+      granularity === 'month' ? months.indexOf(monthOf(o.date)) : Math.floor(daysBetween(first, o.date) / 7);
+    const bucket = buckets[i];
+    if (!bucket) continue;
+    bucket.orders += 1;
+    if (o.status === 'Zwrócone') bucket.returns += 1;
+    if (countsAsRevenue(o)) {
+      bucket.paidOrders += 1;
+      grosze[i] = (grosze[i] ?? 0) + Math.round(o.amount * 100);
+    }
+  }
+  buckets.forEach((b, i) => {
+    b.revenue = (grosze[i] ?? 0) / 100;
+  });
+  return buckets;
+}
+
+export interface SeriesPoint extends Bucket {
+  /** Bucket at the same position in the previous period; null when that period is shorter */
+  previousStart: string | null;
+  previousEnd: string | null;
+  previousRevenue: number | null;
+}
+
+/** Current period buckets, each paired with the bucket at the same position in the previous period. */
+export function timeSeries(
   current: readonly Order[],
   previous: readonly Order[],
   periods: Periods,
-): MonthPoint[] {
-  const revenueBy = (orders: readonly Order[]) => {
-    const map = new Map<string, { grosze: number; count: number }>();
-    for (const o of orders) {
-      const key = monthOf(o.date);
-      const entry = map.get(key) ?? { grosze: 0, count: 0 };
-      entry.count += 1;
-      if (countsAsRevenue(o)) entry.grosze += Math.round(o.amount * 100);
-      map.set(key, entry);
-    }
-    return map;
-  };
-  const cur = revenueBy(current);
-  const prev = revenueBy(previous);
-  const prevMonths = monthRange(periods.previous.start, periods.previous.end);
-
-  return monthRange(periods.current.start, periods.current.end).map((month, i) => {
-    const previousMonth = prevMonths[i] ?? addMonths(month, -prevMonths.length);
+  granularity: Granularity,
+): SeriesPoint[] {
+  const prev = bucketSeries(previous, periods.previous, granularity);
+  return bucketSeries(current, periods.current, granularity).map((b, i) => {
+    const p = prev[i];
     return {
-      month,
-      revenue: (cur.get(month)?.grosze ?? 0) / 100,
-      orders: cur.get(month)?.count ?? 0,
-      previousMonth,
-      previousRevenue: (prev.get(previousMonth)?.grosze ?? 0) / 100,
+      ...b,
+      previousStart: p?.start ?? null,
+      previousEnd: p?.end ?? null,
+      previousRevenue: p ? p.revenue : null,
     };
   });
 }
@@ -264,7 +310,11 @@ export function sortOrders(orders: readonly Order[], key: SortKey, direction: So
   return [...orders].sort((a, b) => {
     let result: number;
     if (key === 'amount') result = a.amount - b.amount;
-    else if (key === 'date' || key === 'id') result = a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0;
+    else if (key === 'date') {
+      const ka = `${a.date} ${a.time}`;
+      const kb = `${b.date} ${b.time}`;
+      result = ka < kb ? -1 : ka > kb ? 1 : 0;
+    } else if (key === 'id') result = a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
     else result = collator.compare(a[key], b[key]);
     // Ties fall back to the order number so the result is stable and predictable.
     if (result === 0 && key !== 'id') result = a.id < b.id ? -1 : a.id > b.id ? 1 : 0;

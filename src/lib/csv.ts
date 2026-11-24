@@ -41,13 +41,25 @@ export function formatCsvDate(isoDate: string): string {
   return `${d}.${m}.${y}`;
 }
 
-export const ORDER_CSV_HEADER = ['Numer', 'Data', 'Klient', 'Kategoria', 'Kanał', 'Kwota (zł)', 'Status'] as const;
+export const ORDER_CSV_HEADER = [
+  'Numer',
+  'Data',
+  'Godzina',
+  'Klient',
+  'Produkt',
+  'Kategoria',
+  'Kanał',
+  'Kwota (zł)',
+  'Status',
+] as const;
 
 export function ordersToCsv(orders: readonly Order[]): string {
   const rows = orders.map((o) => [
     protectFormula(o.id),
     formatCsvDate(o.date),
+    o.time,
     protectFormula(o.client),
+    protectFormula(o.product),
     protectFormula(o.category),
     protectFormula(o.channel),
     formatCsvAmount(o.amount),
