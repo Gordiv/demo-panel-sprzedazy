@@ -1,59 +1,64 @@
+import { useId } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import type { Theme } from '../lib/theme';
 
 interface ThemeToggleProps {
   theme: Theme;
-  onChange: (theme: Theme) => void;
+  onToggle: () => void;
 }
 
-function SunIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-      <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path
-        d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+const RAYS = [0, 45, 90, 135, 180, 225, 270, 315];
 
-function MoonIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-      <path
-        d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+/** Sun that turns into a moon: the core grows, a shadow disc slides in, the rays retract. */
+export function ThemeToggle({ theme, onToggle }: ThemeToggleProps) {
+  const dark = theme === 'dark';
+  const maskId = useId();
+  const reduced = useReducedMotion();
+  const spring = reduced ? { duration: 0 } : { type: 'spring' as const, stiffness: 260, damping: 22 };
 
-const OPTIONS: ReadonlyArray<{ value: Theme; label: string; icon: () => React.JSX.Element }> = [
-  { value: 'light', label: 'Jasny', icon: SunIcon },
-  { value: 'dark', label: 'Ciemny', icon: MoonIcon },
-];
-
-/** Two pressed-state buttons: the current theme is visible and announced. */
-export function ThemeToggle({ theme, onChange }: ThemeToggleProps) {
   return (
-    <div className="segmented theme-toggle" role="group" aria-label="Motyw kolorystyczny">
-      {OPTIONS.map(({ value, label, icon: Icon }) => (
-        <button
-          key={value}
-          type="button"
-          className="segmented__option"
-          aria-pressed={theme === value}
-          onClick={() => onChange(value)}
+    <button
+      type="button"
+      className="icon-btn theme-toggle"
+      onClick={onToggle}
+      aria-pressed={dark}
+      aria-label="Ciemny motyw"
+      title="Przełącz motyw (T)"
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+        <mask id={maskId}>
+          <rect x="0" y="0" width="24" height="24" fill="white" />
+          <motion.circle
+            r="8"
+            fill="black"
+            initial={false}
+            animate={dark ? { cx: 17, cy: 7 } : { cx: 30, cy: -6 }}
+            transition={spring}
+          />
+        </mask>
+        <motion.circle
+          cx="12"
+          cy="12"
+          fill="currentColor"
+          mask={`url(#${maskId})`}
+          initial={false}
+          animate={{ r: dark ? 8.5 : 4.6 }}
+          transition={spring}
+        />
+        <motion.g
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          initial={false}
+          animate={{ opacity: dark ? 0 : 1, rotate: dark ? -60 : 0, scale: dark ? 0.4 : 1 }}
+          style={{ originX: '12px', originY: '12px' }}
+          transition={spring}
         >
-          <Icon />
-          <span>{label}</span>
-        </button>
-      ))}
-    </div>
+          {RAYS.map((deg) => (
+            <line key={deg} x1="12" y1="2.6" x2="12" y2="4.6" transform={`rotate(${deg} 12 12)`} />
+          ))}
+        </motion.g>
+      </svg>
+    </button>
   );
 }

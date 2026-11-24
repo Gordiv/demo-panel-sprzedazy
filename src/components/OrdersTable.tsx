@@ -1,12 +1,20 @@
-import { useEffect, useId, useMemo, useState } from 'react';
-import type { Order, OrderStatus } from '../data/types';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { motion } from 'motion/react';
+import { useMotionEnabled } from '../lib/motion';
+import { Presence } from './Presence';
+import type { Order } from '../data/types';
 import { paginate, searchOrders, sortOrders, type SortDirection, type SortKey } from '../lib/aggregate';
 import { downloadCsv, ordersToCsv } from '../lib/csv';
 import { formatCurrency, formatDate, formatInteger, formatOrderCount } from '../lib/format';
 import { useDebouncedValue } from '../lib/hooks';
+import { EmptyState } from './EmptyState';
+import { Icon } from './Icon';
+import { StatusPill } from './StatusIcon';
+import { Tile } from './Tile';
 
 const PAGE_SIZE = 8;
 const SEARCH_DELAY_MS = 250;
+export const ORDER_SEARCH_ID = 'order-search';
 
 interface Column {
   key: SortKey;
@@ -24,21 +32,15 @@ const COLUMNS: readonly Column[] = [
   { key: 'status', label: 'Status' },
 ];
 
-const STATUS_CLASS: Record<OrderStatus, string> = {
-  Zrealizowane: 'badge--done',
-  'W realizacji': 'badge--progress',
-  Zwrócone: 'badge--returned',
-  Anulowane: 'badge--cancelled',
-};
-
 interface OrdersTableProps {
   orders: readonly Order[];
   /** Used in the CSV file name, e.g. "2025-11_2026-10" */
   periodLabel: string;
+  className?: string;
 }
 
-export function OrdersTable({ orders, periodLabel }: OrdersTableProps) {
-  const searchId = useId();
+export function OrdersTable({ orders, periodLabel, className }: OrdersTableProps) {
+  const animate = useMotionEnabled();
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, SEARCH_DELAY_MS);
   const [sortKey, setSortKey] = useState<SortKey>('date');
@@ -72,27 +74,27 @@ export function OrdersTable({ orders, periodLabel }: OrdersTableProps) {
   const isSearching = debouncedQuery.trim().length > 0;
 
   return (
-    <section className="card orders" aria-labelledby="orders-title">
-      <header className="card__header orders__header">
-        <div>
-          <h2 id="orders-title" className="card__title">
-            Zamówienia
-          </h2>
-          <p className="card__subtitle">
-            {formatOrderCount(orders.length)} w wybranym okresie
-          </p>
+    <Tile className={`orders ${className ?? ''}`} labelledBy="orders-title">
+      <header className="tile__header orders__header">
+        <div className="tile__heading">
+          <span className="tile__icon">
+            <Icon name="orders" size={17} />
+          </span>
+          <div>
+            <h3 id="orders-title" className="tile__title">
+              Lista zamówień
+            </h3>
+            <p className="tile__subtitle">{formatOrderCount(orders.length)} w wybranym okresie</p>
+          </div>
         </div>
         <div className="orders__tools">
           <div className="search">
-            <label htmlFor={searchId} className="sr-only">
+            <label htmlFor={ORDER_SEARCH_ID} className="sr-only">
               Szukaj po kliencie lub numerze zamówienia
             </label>
-            <svg className="search__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-              <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
-              <path d="m20 20-4.2-4.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+            <Icon name="search" size={16} className="search__icon" />
             <input
-              id={searchId}
+              id={ORDER_SEARCH_ID}
               type="search"
               className="input search__input"
               placeholder="Klient lub numer zamówienia"
@@ -100,24 +102,14 @@ export function OrdersTable({ orders, periodLabel }: OrdersTableProps) {
               onChange={(e) => setQuery(e.target.value)}
               autoComplete="off"
               spellCheck={false}
+              aria-keyshortcuts="/"
             />
+            <kbd className="search__kbd" aria-hidden="true">
+              /
+            </kbd>
           </div>
-          <button
-            type="button"
-            className="btn btn--primary"
-            onClick={exportCsv}
-            disabled={results.length === 0}
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-              <path
-                d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19h14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+          <button type="button" className="btn btn--primary" onClick={exportCsv} disabled={results.length === 0}>
+            <Icon name="download" size={16} />
             Eksportuj CSV
             <span className="sr-only"> ({formatOrderCount(results.length)})</span>
           </button>
@@ -125,9 +117,7 @@ export function OrdersTable({ orders, periodLabel }: OrdersTableProps) {
       </header>
 
       <p className="sr-only" aria-live="polite" aria-atomic="true">
-        {isSearching
-          ? `Znaleziono ${formatOrderCount(results.length)}`
-          : `Lista zawiera ${formatOrderCount(results.length)}`}
+        {isSearching ? `Znaleziono ${formatOrderCount(results.length)}` : `Lista zawiera ${formatOrderCount(results.length)}`}
       </p>
 
       <div className="table-scroll" role="region" aria-labelledby="orders-title" tabIndex={0}>
@@ -141,16 +131,12 @@ export function OrdersTable({ orders, periodLabel }: OrdersTableProps) {
               {COLUMNS.map((col) => {
                 const active = col.key === sortKey;
                 const ariaSort = active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+                const classes = [col.numeric ? 'num-cell' : '', col.key === 'id' ? 'sticky-col' : ''].join(' ').trim();
                 return (
-                  <th
-                    key={col.key}
-                    scope="col"
-                    aria-sort={ariaSort}
-                    className={`${col.numeric ? 'num-cell' : ''} ${col.key === 'id' ? 'sticky-col' : ''}`.trim() || undefined}
-                  >
-                    <button type="button" className="sort-btn" onClick={() => toggleSort(col.key)}>
+                  <th key={col.key} scope="col" aria-sort={ariaSort} className={classes || undefined}>
+                    <button type="button" className={`sort-btn${active ? ' is-active' : ''}`} onClick={() => toggleSort(col.key)}>
                       {col.label}
-                      <span className={`sort-btn__icon${active ? ' is-active' : ''}`} aria-hidden="true">
+                      <span className="sort-btn__icon" aria-hidden="true">
                         {active ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
                       </span>
                     </button>
@@ -163,38 +149,54 @@ export function OrdersTable({ orders, periodLabel }: OrdersTableProps) {
             {current.items.length === 0 ? (
               <tr>
                 <td colSpan={COLUMNS.length} className="table-empty">
-                  <p className="table-empty__title">Brak zamówień dla wybranych filtrów</p>
-                  <p className="table-empty__hint">
-                    {isSearching
-                      ? 'Spróbuj innej frazy albo wyczyść wyszukiwanie.'
-                      : 'Zmień okres, kategorię lub kanał sprzedaży.'}
-                  </p>
-                  {isSearching ? (
-                    <button type="button" className="btn btn--ghost" onClick={() => setQuery('')}>
-                      Wyczyść wyszukiwanie
-                    </button>
-                  ) : null}
+                  <EmptyState
+                    title="Brak zamówień dla wybranych filtrów"
+                    hint={
+                      isSearching
+                        ? 'Spróbuj innej frazy albo wyczyść wyszukiwanie.'
+                        : 'Zmień okres, kategorię lub kanał sprzedaży.'
+                    }
+                    action={
+                      isSearching ? (
+                        <button type="button" className="btn btn--ghost" onClick={() => setQuery('')}>
+                          Wyczyść wyszukiwanie
+                        </button>
+                      ) : null
+                    }
+                  />
                 </td>
               </tr>
             ) : (
-              current.items.map((o) => (
-                <tr key={o.id}>
-                  <th scope="row" className="sticky-col mono nowrap">
-                    {o.id}
-                  </th>
-                  <td className="num nowrap">{formatDate(o.date)}</td>
-                  <td className="nowrap">{o.client}</td>
-                  <td className="nowrap">{o.category}</td>
-                  <td className="nowrap">{o.channel}</td>
-                  <td className="num num-cell nowrap">{formatCurrency(o.amount)}</td>
-                  <td>
-                    <span className={`badge ${STATUS_CLASS[o.status]}`}>
-                      <span className="badge__dot" aria-hidden="true" />
-                      {o.status}
-                    </span>
-                  </td>
-                </tr>
-              ))
+              <Presence enabled={animate}>
+                {current.items.map((o, i) => (
+                  <motion.tr
+                    key={o.id}
+                    className="row-in"
+                    style={{ '--i': i } as CSSProperties}
+                    layout={animate ? 'position' : false}
+                    exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                    transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <th scope="row" className="sticky-col mono nowrap">
+                      {o.id}
+                    </th>
+                    <td className="nowrap">
+                      <span className="num">{formatDate(o.date)}</span>
+                      <span className="cell-sub num">{o.time}</span>
+                    </td>
+                    <td className="nowrap">
+                      <span className="cell-main">{o.client}</span>
+                      <span className="cell-sub">{o.product}</span>
+                    </td>
+                    <td className="nowrap">{o.category}</td>
+                    <td className="nowrap">{o.channel}</td>
+                    <td className="num num-cell nowrap cell-amount">{formatCurrency(o.amount)}</td>
+                    <td>
+                      <StatusPill status={o.status} />
+                    </td>
+                  </motion.tr>
+                ))}
+              </Presence>
             )}
           </tbody>
         </table>
@@ -213,7 +215,7 @@ export function OrdersTable({ orders, periodLabel }: OrdersTableProps) {
             onClick={() => setPage(current.page - 1)}
             disabled={current.page <= 1}
           >
-            <span aria-hidden="true">←</span> Poprzednia
+            <Icon name="chevronLeft" size={16} /> Poprzednia
           </button>
           <span className="pagination__page num">
             Strona {current.page} z {current.pageCount}
@@ -224,10 +226,10 @@ export function OrdersTable({ orders, periodLabel }: OrdersTableProps) {
             onClick={() => setPage(current.page + 1)}
             disabled={current.page >= current.pageCount}
           >
-            Następna <span aria-hidden="true">→</span>
+            Następna <Icon name="chevronRight" size={16} />
           </button>
         </div>
       </nav>
-    </section>
+    </Tile>
   );
 }

@@ -1,3 +1,5 @@
+import { Icon } from './Icon';
+
 interface ChartTableProps {
   caption: string;
   columns: readonly string[];
@@ -8,7 +10,10 @@ interface ChartTableProps {
 export function ChartTable({ caption, columns, rows }: ChartTableProps) {
   return (
     <details className="chart-table">
-      <summary>Pokaż dane w tabeli</summary>
+      <summary>
+        <Icon name="table" size={15} />
+        Pokaż dane w tabeli
+      </summary>
       <div className="chart-table__scroll">
         <table className="data-table data-table--compact">
           <caption className="sr-only">{caption}</caption>

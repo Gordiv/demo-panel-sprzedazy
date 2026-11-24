@@ -20,37 +20,38 @@ export function storeTheme(theme: Theme): void {
   }
 }
 
+/** Colours the SVG charts need as plain values (they mirror the CSS tokens). */
 export interface ChartPalette {
-  /** Categorical slots, assigned in fixed order */
+  /** Channel slots in fixed order */
   series: readonly [string, string, string];
-  accent: string;
+  lineFrom: string;
+  lineTo: string;
   previous: string;
   grid: string;
-  axis: string;
   tick: string;
-  surface: string;
+  dotFill: string;
   cursor: string;
 }
 
 export const CHART_PALETTES: Record<Theme, ChartPalette> = {
   light: {
-    series: ['#2a78d6', '#eb6834', '#1baf7a'],
-    accent: '#2a78d6',
-    previous: '#7a828e',
-    grid: '#e6e8ec',
-    axis: '#c9cdd4',
-    tick: '#4a5260',
-    surface: '#ffffff',
-    cursor: '#d5d9df',
+    series: ['#6a4cf5', '#0891b2', '#d97706'],
+    lineFrom: '#6a4cf5',
+    lineTo: '#0891b2',
+    previous: '#6b7196',
+    grid: 'rgba(40, 46, 110, 0.12)',
+    tick: '#454c72',
+    dotFill: '#ffffff',
+    cursor: 'rgba(60, 56, 160, 0.35)',
   },
   dark: {
-    series: ['#3987e5', '#d95926', '#199e70'],
-    accent: '#5b9cec',
-    previous: '#8d96a3',
-    grid: '#272d35',
-    axis: '#3a414b',
-    tick: '#b3bac5',
-    surface: '#171b21',
-    cursor: '#3a414b',
+    series: ['#9d8cff', '#3fd0f0', '#f5b84a'],
+    lineFrom: '#a594ff',
+    lineTo: '#4fd8f5',
+    previous: '#9aa1cc',
+    grid: 'rgba(200, 205, 255, 0.10)',
+    tick: '#b9bfe6',
+    dotFill: '#0d1030',
+    cursor: 'rgba(200, 205, 255, 0.4)',
   },
 };

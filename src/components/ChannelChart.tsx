@@ -1,114 +1,117 @@
-import { Pie, PieChart, Tooltip } from 'recharts';
+import { useState, type CSSProperties } from 'react';
 import type { Channel } from '../data/types';
 import type { Share } from '../lib/aggregate';
-import {
-  formatCurrency,
-  formatCurrencyCompact,
-  formatOrderCount,
-  formatPercent,
-} from '../lib/format';
-import { CHART_PALETTES, type Theme } from '../lib/theme';
+import { formatCompactOrDash, formatCurrency, formatOrderCount, formatPercent } from '../lib/format';
+import { donutArcs } from '../lib/geometry';
+import { AnimatedNumber } from './AnimatedNumber';
 import { ChartTable } from './ChartTable';
+import { Icon } from './Icon';
+import { Tile, TileHeader } from './Tile';
 
 interface ChannelChartProps {
   data: Share<Channel>[];
-  theme: Theme;
-  animate: boolean;
+  className?: string;
 }
 
-interface Slice extends Share<Channel> {
-  fill: string;
-  [key: string]: unknown;
-}
+const SIZE = 200;
+const STROKE = 24;
+const R = (SIZE - STROKE) / 2;
+const SLOT_COLORS = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)'] as const;
+const SLOT_MARKS = ['circle', 'square', 'diamond'] as const;
 
-export function ChannelChart({ data, theme, animate }: ChannelChartProps) {
-  const palette = CHART_PALETTES[theme];
-  // Colour belongs to the channel (fixed slot), never to its rank.
-  const slices: Slice[] = data.map((d, i) => ({ ...d, fill: palette.series[i] ?? palette.accent }));
-  const visible = slices.filter((s) => s.revenue > 0);
-  const total = data.reduce((sum, d) => sum + d.revenue, 0);
+/** Donut drawn by hand: arcs sweep in, legend and arcs highlight each other. */
+export function ChannelChart({ data, className }: ChannelChartProps) {
+  const [focus, setFocus] = useState<Channel | null>(null);
+  const total = data.reduce((s, d) => s + d.revenue, 0);
+  const arcs = donutArcs(
+    data.map((d) => d.revenue),
+    0.012,
+  );
+  const focused = data.find((d) => d.key === focus);
 
   return (
-    <section className="card chart-card" aria-labelledby="channel-title">
-      <header className="card__header">
-        <div>
-          <h2 id="channel-title" className="card__title">
-            Udział kanałów sprzedaży
-          </h2>
-          <p className="card__subtitle">Procent przychodu</p>
-        </div>
-      </header>
-
+    <Tile className={className} labelledBy="channel-title">
+      <TileHeader
+        id="channel-title"
+        title="Kanały sprzedaży"
+        icon={<Icon name="channels" size={17} />}
+        subtitle="Udział w przychodzie"
+      />
       {total === 0 ? (
         <p className="chart-empty">Brak przychodu dla wybranych filtrów.</p>
       ) : (
         <div className="donut">
           <div className="donut__chart">
-            <PieChart responsive style={{ width: '100%', height: '100%' }}>
-              <Pie
-                data={visible}
-                dataKey="revenue"
-                nameKey="key"
-                innerRadius="64%"
-                outerRadius="96%"
-                startAngle={90}
-                endAngle={-270}
-                paddingAngle={visible.length > 1 ? 1.5 : 0}
-                stroke={palette.surface}
-                strokeWidth={2}
-                isAnimationActive={animate}
-              />
-              <Tooltip
-                isAnimationActive={false}
-                content={({ active, payload }) => {
-                  const row = payload?.[0]?.payload as Slice | undefined;
-                  if (!active || !row) return null;
-                  return (
-                    <div className="chart-tooltip">
-                      <p className="chart-tooltip__title">{row.key}</p>
-                      <dl className="chart-tooltip__rows">
-                        <div>
-                          <dt>Przychód</dt>
-                          <dd className="num">{formatCurrency(row.revenue)}</dd>
-                        </div>
-                        <div>
-                          <dt>Udział</dt>
-                          <dd className="num">{formatPercent(row.share)}</dd>
-                        </div>
-                        <div>
-                          <dt>Zamówienia</dt>
-                          <dd className="num">{formatOrderCount(row.orders)}</dd>
-                        </div>
-                      </dl>
-                    </div>
-                  );
-                }}
-              />
-            </PieChart>
-            <div className="donut__center" aria-hidden="true">
-              <span className="donut__center-label">Razem</span>
-              <span className="donut__center-value num">{formatCurrencyCompact(total)}</span>
+            <svg viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true" focusable="false">
+              <circle className="ring-track" cx={SIZE / 2} cy={SIZE / 2} r={R} strokeWidth={STROKE} fill="none" />
+              {data.map((d, i) => {
+                const arc = arcs[i];
+                if (!arc || arc.length <= 0) return null;
+                const dimmed = focus !== null && focus !== d.key;
+                return (
+                  <circle
+                    key={d.key}
+                    className={`donut__arc sweep${dimmed ? ' is-dimmed' : ''}`}
+                    cx={SIZE / 2}
+                    cy={SIZE / 2}
+                    r={R}
+                    fill="none"
+                    strokeWidth={STROKE}
+                    pathLength={1}
+                    transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
+                    style={
+                      {
+                        stroke: SLOT_COLORS[i],
+                        '--len': arc.length,
+                        '--start': arc.start,
+                        '--d': `${100 + i * 140}ms`,
+                      } as CSSProperties
+                    }
+                    onPointerEnter={() => setFocus(d.key)}
+                    onPointerLeave={() => setFocus(null)}
+                  />
+                );
+              })}
+            </svg>
+            <div className="donut__center">
+              <span className="donut__center-label">{focused ? focused.key : 'Razem'}</span>
+              <span className="donut__center-value num">
+                {focused ? (
+                  formatPercent(focused.share)
+                ) : (
+                  <AnimatedNumber value={total} format={formatCompactOrDash} duration={1300} />
+                )}
+              </span>
+              {focused ? <span className="donut__center-sub num">{formatCurrency(focused.revenue)}</span> : null}
             </div>
           </div>
 
           <ul className="donut__legend" aria-label="Kanały sprzedaży">
-            {slices.map((s) => (
-              <li key={s.key}>
-                <span className="swatch swatch--dot" style={{ background: s.fill }} aria-hidden="true" />
-                <span className="donut__legend-name">{s.key}</span>
-                <span className="donut__legend-share num">{formatPercent(s.share)}</span>
-                <span className="donut__legend-value num">{formatCurrency(s.revenue)}</span>
+            {data.map((d, i) => (
+              <li key={d.key}>
+                <div
+                  className={`legend-item${focus !== null && focus !== d.key ? ' is-dimmed' : ''}`}
+                  onPointerEnter={() => setFocus(d.key)}
+                  onPointerLeave={() => setFocus(null)}
+                >
+                  <span className={`mark mark--${SLOT_MARKS[i]}`} style={{ background: SLOT_COLORS[i] }} aria-hidden="true" />
+                  <span className="legend-item__name">{d.key}</span>
+                  <span className="legend-item__share num">{formatPercent(d.share)}</span>
+                  <span className="legend-item__value num">
+                    {formatCurrency(d.revenue)}
+                    <span className="legend-item__orders">{formatOrderCount(d.orders)}</span>
+                  </span>
+                </div>
               </li>
             ))}
           </ul>
         </div>
       )}
-
       <ChartTable
         caption="Przychód według kanałów sprzedaży"
         columns={['Kanał', 'Przychód', 'Udział', 'Zamówienia']}
         rows={data.map((d) => [d.key, formatCurrency(d.revenue), formatPercent(d.share), String(d.orders)])}
       />
-    </section>
+    </Tile>
   );
 }
