@@ -10,6 +10,7 @@ const currencyWhole = new Intl.NumberFormat(LOCALE, {
 });
 const integer = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 });
 const oneDecimal = new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const upToOneDecimal = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 });
 const percent = new Intl.NumberFormat(LOCALE, {
   style: 'percent',
   minimumFractionDigits: 1,
@@ -38,11 +39,11 @@ export function formatCurrencyWhole(value: number | null): string {
   return value === null ? EM_DASH : currencyWhole.format(value);
 }
 
-/** Short axis label: 12 400 -> "12,4 tys. zł", 950 -> "950 zł" */
+/** Short axis label: 12 400 -> "12,4 tys. zł", 30 000 -> "30 tys. zł", 950 -> "950 zł" */
 export function formatCurrencyCompact(value: number): string {
   const abs = Math.abs(value);
-  if (abs >= 1_000_000) return `${oneDecimal.format(value / 1_000_000)} mln zł`;
-  if (abs >= 1_000) return `${oneDecimal.format(value / 1_000)} tys. zł`;
+  if (abs >= 1_000_000) return `${upToOneDecimal.format(value / 1_000_000)} mln zł`;
+  if (abs >= 1_000) return `${upToOneDecimal.format(value / 1_000)} tys. zł`;
   return `${integer.format(value)} zł`;
 }
 

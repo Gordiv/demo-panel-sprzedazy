@@ -179,7 +179,7 @@ export function OrdersTable({ orders, periodLabel }: OrdersTableProps) {
             ) : (
               current.items.map((o) => (
                 <tr key={o.id}>
-                  <th scope="row" className="sticky-col mono">
+                  <th scope="row" className="sticky-col mono nowrap">
                     {o.id}
                   </th>
                   <td className="num nowrap">{formatDate(o.date)}</td>

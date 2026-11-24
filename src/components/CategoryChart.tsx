@@ -2,6 +2,7 @@ import { Bar, BarChart, CartesianGrid, LabelList, Tooltip, XAxis, YAxis } from '
 import type { Category } from '../data/types';
 import type { Share } from '../lib/aggregate';
 import { formatCurrency, formatCurrencyCompact, formatOrderCount, formatPercent } from '../lib/format';
+import { niceTicks } from '../lib/scale';
 import { CHART_PALETTES, type Theme } from '../lib/theme';
 import { ChartTable } from './ChartTable';
 
@@ -16,6 +17,7 @@ export function CategoryChart({ data, theme, animate }: CategoryChartProps) {
   // Bars are one colour (the category is named on the axis), so sorting by value is safe.
   const sorted = [...data].sort((a, b) => b.revenue - a.revenue);
   const empty = sorted.every((d) => d.revenue === 0);
+  const ticks = niceTicks(sorted[0]?.revenue ?? 0, 3);
 
   return (
     <section className="card chart-card" aria-labelledby="category-title">
@@ -47,7 +49,8 @@ export function CategoryChart({ data, theme, animate }: CategoryChartProps) {
               tick={{ fill: palette.tick, fontSize: 12 }}
               axisLine={false}
               tickLine={false}
-              tickCount={4}
+              ticks={ticks}
+              domain={[0, ticks[ticks.length - 1] ?? 1]}
             />
             <YAxis
               type="category"

@@ -33,6 +33,7 @@ describe('numbers and money', () => {
     expect(plain(formatCurrencyCompact(950))).toBe('950 zł');
     expect(plain(formatCurrencyCompact(12400))).toBe('12,4 tys. zł');
     expect(plain(formatCurrencyCompact(2_500_000))).toBe('2,5 mln zł');
+    expect(plain(formatCurrencyCompact(30_000))).toBe('30 tys. zł');
   });
 
   it('formats percentages with one decimal', () => {

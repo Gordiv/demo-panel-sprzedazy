@@ -29,8 +29,8 @@ interface CategoryProfile {
 }
 
 const CATEGORY_PROFILES: Record<Category, CategoryProfile> = {
-  Elektronika: { weight: 0.2, median: 780, sigma: 0.55, min: 79, max: 6999, peaks: { 10: 1.5, 11: 1.6 } },
-  'Dom i ogród': { weight: 0.22, median: 290, sigma: 0.55, min: 39, max: 2899, peaks: { 3: 1.5, 4: 1.6, 5: 1.4 } },
+  Elektronika: { weight: 0.18, median: 560, sigma: 0.5, min: 79, max: 6999, peaks: { 10: 1.5, 11: 1.6 } },
+  'Dom i ogród': { weight: 0.22, median: 330, sigma: 0.55, min: 39, max: 2899, peaks: { 3: 1.5, 4: 1.6, 5: 1.4 } },
   Moda: { weight: 0.25, median: 185, sigma: 0.45, min: 29, max: 1299, peaks: { 8: 1.2, 11: 1.3 } },
   'Sport i rekreacja': { weight: 0.16, median: 340, sigma: 0.55, min: 35, max: 3499, peaks: { 4: 1.4, 5: 1.5, 6: 1.4 } },
   'Zdrowie i uroda': { weight: 0.17, median: 120, sigma: 0.4, min: 19, max: 899, peaks: { 11: 1.5 } },

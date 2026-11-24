@@ -9,6 +9,7 @@ import {
   formatMonthShort,
   formatPercent,
 } from '../lib/format';
+import { niceTicks } from '../lib/scale';
 import { CHART_PALETTES, type Theme } from '../lib/theme';
 import { ChartTable } from './ChartTable';
 
@@ -70,6 +71,9 @@ export function RevenueChart({ data, theme, animate, hasPrevious }: RevenueChart
   const first = data[0];
   const last = data[data.length - 1];
   const empty = data.every((d) => d.revenue === 0);
+  const ticks = niceTicks(
+    Math.max(...data.map((d) => Math.max(d.revenue, hasPrevious ? d.previousRevenue : 0)), 0),
+  );
 
   return (
     <section className="card chart-card" aria-labelledby="revenue-title">
@@ -120,6 +124,8 @@ export function RevenueChart({ data, theme, animate, hasPrevious }: RevenueChart
               minTickGap={8}
             />
             <YAxis
+              ticks={ticks}
+              domain={[0, ticks[ticks.length - 1] ?? 1]}
               tickFormatter={(v: number) => formatCurrencyCompact(v)}
               tick={{ fill: palette.tick, fontSize: 12 }}
               axisLine={false}

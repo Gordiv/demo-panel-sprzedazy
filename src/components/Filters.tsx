@@ -10,9 +10,9 @@ interface FiltersProps {
 }
 
 const PERIOD_LABELS: Record<PeriodMonths, string> = {
-  3: 'Ostatnie 3 miesiące',
-  6: 'Ostatnie 6 miesięcy',
-  12: 'Ostatnie 12 miesięcy',
+  3: '3 miesiące',
+  6: '6 miesięcy',
+  12: '12 miesięcy',
 };
 
 function isCategory(value: string): value is Category {
@@ -42,7 +42,13 @@ export function Filters({ value, onChange, onReset, isDefault }: FiltersProps) {
                 checked={value.months === months}
                 onChange={() => onChange({ ...value, months })}
               />
-              <span>{PERIOD_LABELS[months]}</span>
+              <span>
+                {/* The prefix is visually dropped on phones but always read out. */}
+                <span>
+                  <span className="period-prefix">Ostatnie </span>
+                  {PERIOD_LABELS[months]}
+                </span>
+              </span>
             </label>
           ))}
         </div>
