@@ -35,8 +35,10 @@ export function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 /**
- * Pointer-following light on a tile. The element's position is measured on
- * enter and after scrolling only; moves just update two CSS variables once per frame.
+ * Pointer-following light on a tile. A pre-painted gradient disc (`.tile__spot`) is moved
+ * with a compositor-only transform straight from the pointer event, so it never lags a
+ * frame behind. The tile's position is read once on enter and again only after a scroll,
+ * a resize or the end of the hover lift; moves themselves do no layout reads.
  */
 export function useSpotlight<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -44,41 +46,52 @@ export function useSpotlight<T extends HTMLElement>() {
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof window.matchMedia !== 'function' || !window.matchMedia('(hover: hover)').matches) return;
+    const spot = el.querySelector<HTMLElement>('.tile__spot');
+    if (!spot) return;
     let left = 0;
     let top = 0;
-    let x = 0;
-    let y = 0;
-    let frame = 0;
+    let half = 0;
     let stale = true;
 
-    const apply = () => {
-      frame = 0;
-      if (stale) {
-        const rect = el.getBoundingClientRect();
-        left = rect.left;
-        top = rect.top;
-        stale = false;
-      }
-      el.style.setProperty('--mx', `${x - left}px`);
-      el.style.setProperty('--my', `${y - top}px`);
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      left = rect.left;
+      top = rect.top;
+      half = spot.offsetWidth / 2;
+      stale = false;
     };
-    const onMove = (e: PointerEvent) => {
-      x = e.clientX;
-      y = e.clientY;
-      if (!frame) frame = requestAnimationFrame(apply);
+    const place = (x: number, y: number) => {
+      if (stale) measure();
+      spot.style.transform = `translate(${x - left - half}px, ${y - top - half}px)`;
     };
     const invalidate = () => {
       stale = true;
     };
+    const onMove = (e: PointerEvent) => place(e.clientX, e.clientY);
+    const onEnter = (e: PointerEvent) => {
+      stale = true;
+      place(e.clientX, e.clientY);
+      el.classList.add('is-lit');
+      window.addEventListener('scroll', invalidate, { passive: true });
+    };
+    const onLeave = () => {
+      el.classList.remove('is-lit');
+      window.removeEventListener('scroll', invalidate);
+    };
+    const onLiftEnd = (e: TransitionEvent) => {
+      if (e.target === el && e.propertyName === 'transform') stale = true;
+    };
 
-    el.addEventListener('pointerenter', invalidate);
+    el.addEventListener('pointerenter', onEnter, { passive: true });
     el.addEventListener('pointermove', onMove, { passive: true });
-    window.addEventListener('scroll', invalidate, { passive: true });
-    window.addEventListener('resize', invalidate);
+    el.addEventListener('pointerleave', onLeave, { passive: true });
+    el.addEventListener('transitionend', onLiftEnd, { passive: true });
+    window.addEventListener('resize', invalidate, { passive: true });
     return () => {
-      cancelAnimationFrame(frame);
-      el.removeEventListener('pointerenter', invalidate);
+      el.removeEventListener('pointerenter', onEnter);
       el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerleave', onLeave);
+      el.removeEventListener('transitionend', onLiftEnd);
       window.removeEventListener('scroll', invalidate);
       window.removeEventListener('resize', invalidate);
     };

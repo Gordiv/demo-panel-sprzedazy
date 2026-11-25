@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSpotlight } from '../lib/hooks';
 
 interface TileProps {
@@ -16,6 +16,9 @@ export function Tile({ className = '', labelledBy, children }: TileProps) {
   return (
     <article className={`tile-wrap ${className}`} aria-labelledby={labelledBy}>
       <div ref={ref} className="tile">
+        <div className="tile__fx" aria-hidden="true">
+          <span className="tile__spot" />
+        </div>
         {children}
       </div>
     </article>
@@ -27,8 +30,39 @@ interface BentoProps {
   className?: string;
 }
 
+/**
+ * Grid whose tiles play their entrance once, the first time the grid comes into view.
+ * The class is set once and never removed, so scrolling back does not restart anything.
+ */
 export function Bento({ children, className = '' }: BentoProps) {
-  return <div className={`bento ${className}`}>{children}</div>;
+  const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || shown) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setShown(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setShown(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '0px 0px -8% 0px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [shown]);
+
+  return (
+    <div ref={ref} className={`bento ${shown ? 'is-in' : ''} ${className}`}>
+      {children}
+    </div>
+  );
 }
 
 interface TileHeaderProps {

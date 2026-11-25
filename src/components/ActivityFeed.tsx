@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion } from 'motion/react';
 import { Presence } from './Presence';
 import type { Order } from '../data/types';
@@ -13,7 +14,7 @@ interface ActivityFeedProps {
   className?: string;
 }
 
-export function ActivityFeed({ orders, today, className }: ActivityFeedProps) {
+function ActivityFeedView({ orders, today, className }: ActivityFeedProps) {
   const animate = useMotionEnabled();
   return (
     <Tile className={className} labelledBy="activity-title">
@@ -64,3 +65,6 @@ export function ActivityFeed({ orders, today, className }: ActivityFeedProps) {
     </Tile>
   );
 }
+
+/** Re-renders only when its own data changes (filters, theme), not on unrelated app updates. */
+export const ActivityFeed = memo(ActivityFeedView);

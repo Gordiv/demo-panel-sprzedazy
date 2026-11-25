@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { memo, useState, type CSSProperties } from 'react';
 import type { Channel } from '../data/types';
 import type { Share } from '../lib/aggregate';
 import { formatCompactOrDash, formatCurrency, formatOrderCount, formatPercent } from '../lib/format';
@@ -20,7 +20,7 @@ const SLOT_COLORS = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)'] as
 const SLOT_MARKS = ['circle', 'square', 'diamond'] as const;
 
 /** Donut drawn by hand: arcs sweep in, legend and arcs highlight each other. */
-export function ChannelChart({ data, className }: ChannelChartProps) {
+function ChannelChartView({ data, className }: ChannelChartProps) {
   const [focus, setFocus] = useState<Channel | null>(null);
   const total = data.reduce((s, d) => s + d.revenue, 0);
   const arcs = donutArcs(
@@ -115,3 +115,6 @@ export function ChannelChart({ data, className }: ChannelChartProps) {
     </Tile>
   );
 }
+
+/** Re-renders only when its own data changes (filters, theme), not on unrelated app updates. */
+export const ChannelChart = memo(ChannelChartView);

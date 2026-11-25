@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { memo, useId, useState } from 'react';
 import { Area, CartesianGrid, ComposedChart, Line, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Delta, Granularity, SeriesPoint } from '../lib/aggregate';
 import {
@@ -79,7 +79,7 @@ function GlassTooltip({ point, granularity, hasPrevious }: { point: SeriesPoint;
   );
 }
 
-export function RevenueChart({ data, granularity, total, delta, theme, animate, hasPrevious, className }: RevenueChartProps) {
+function RevenueChartView({ data, granularity, total, delta, theme, animate, hasPrevious, className }: RevenueChartProps) {
   const palette = CHART_PALETTES[theme];
   const uid = useId().replace(/:/g, '');
   const [hover, setHover] = useState<number | null>(null);
@@ -169,13 +169,6 @@ export function RevenueChart({ data, granularity, total, delta, theme, animate, 
                 <stop offset="0.65" stopColor={palette.lineTo} stopOpacity={0.06} />
                 <stop offset="1" stopColor={palette.lineTo} stopOpacity={0} />
               </linearGradient>
-              <filter id={`${uid}-glow`} x="-5%" y="-40%" width="110%" height="180%">
-                <feGaussianBlur stdDeviation="5" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
             </defs>
             <CartesianGrid stroke={palette.grid} vertical={false} strokeDasharray="2 6" />
             <XAxis
@@ -213,7 +206,7 @@ export function RevenueChart({ data, granularity, total, delta, theme, animate, 
               stroke="none"
               fill={`url(#${uid}-fill)`}
               isAnimationActive={animate}
-              animationDuration={1100}
+              animationDuration={850}
               animationEasing="ease-out"
               activeDot={false}
             />
@@ -228,20 +221,35 @@ export function RevenueChart({ data, granularity, total, delta, theme, animate, 
                 activeDot={{ r: 4, fill: palette.dotFill, stroke: palette.previous, strokeWidth: 2 }}
                 connectNulls={false}
                 isAnimationActive={animate}
-                animationDuration={1100}
+                animationDuration={850}
                 animationEasing="ease-out"
               />
             ) : null}
+            {/* Glow: the same line drawn wide and faint underneath (no SVG blur filter to repaint). */}
+            <Line
+              type="monotone"
+              dataKey="revenue"
+              stroke={`url(#${uid}-stroke)`}
+              strokeWidth={10}
+              strokeOpacity={theme === 'dark' ? 0.22 : 0.16}
+              strokeLinecap="round"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+              tooltipType="none"
+              isAnimationActive={animate}
+              animationDuration={850}
+              animationEasing="ease-out"
+            />
             <Line
               type="monotone"
               dataKey="revenue"
               stroke={`url(#${uid}-stroke)`}
               strokeWidth={3}
-              filter={`url(#${uid}-glow)`}
               dot={false}
               activeDot={{ r: 6, fill: palette.dotFill, stroke: palette.lineFrom, strokeWidth: 3 }}
               isAnimationActive={animate}
-              animationDuration={1300}
+              animationDuration={850}
               animationEasing="ease-out"
             />
           </ComposedChart>
@@ -261,3 +269,6 @@ export function RevenueChart({ data, granularity, total, delta, theme, animate, 
     </Tile>
   );
 }
+
+/** Re-renders only when its own data changes (filters, theme), not on unrelated app updates. */
+export const RevenueChart = memo(RevenueChartView);

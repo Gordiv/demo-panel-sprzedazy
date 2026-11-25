@@ -2,6 +2,7 @@
    Tokens
    ========================================================= */
 :root {
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   color-scheme: light;
   --bg: #eceffb;
   --blob-1: #b6a3ff;
@@ -9,13 +10,13 @@
   --blob-3: #ffb6d9;
   --blob-4: #a9c0ff;
   --blob-opacity: 0.75;
-  --grain-opacity: 0.05;
 
   --glass: rgba(255, 255, 255, 0.6);
-  --glass-strong: rgba(255, 255, 255, 0.93);
+  --glass-strong: rgba(255, 255, 255, 0.96);
+  --glass-sheen: rgba(255, 255, 255, 0.5);
+  --bar: rgba(248, 249, 255, 0.95);
   --glass-solid: #f7f8ff;
   --sticky-bg: #f3f4fd;
-  --glass-blur: 22px;
   --edge-hi: rgba(255, 255, 255, 0.95);
   --edge-mid: rgba(255, 255, 255, 0.35);
   --edge-lo: rgba(120, 125, 200, 0.18);
@@ -77,9 +78,10 @@
     --blob-3: #c932e6;
     --blob-4: #2f54ff;
     --blob-opacity: 0.5;
-    --grain-opacity: 0.07;
     --glass: rgba(18, 22, 52, 0.6);
-    --glass-strong: rgba(16, 20, 48, 0.94);
+    --glass-strong: rgba(16, 20, 48, 0.96);
+    --glass-sheen: rgba(255, 255, 255, 0.055);
+    --bar: rgba(15, 19, 46, 0.95);
     --glass-solid: #141a3d;
     --sticky-bg: #141a3b;
     --edge-hi: rgba(255, 255, 255, 0.3);
@@ -93,7 +95,7 @@
     --text: #f3f5ff;
     --text-2: #cdd1f2;
     --muted: #aab0d8;
-    --accent: #a594ff;
+    --accent: #b0a3ff;
     --accent-hover: #bcb0ff;
     --accent-text: #0b0d26;
     --accent-soft: rgba(165, 148, 255, 0.16);
@@ -111,10 +113,10 @@
     --heat: #a594ff;
     --good: #62e8a9;
     --good-bg: rgba(98, 232, 169, 0.14);
-    --bad: #ff8fab;
+    --bad: #ffa6bb;
     --bad-bg: rgba(255, 143, 171, 0.14);
     --neutral-bg: rgba(200, 205, 255, 0.1);
-    --progress: #9fb2ff;
+    --progress: #b4c2ff;
     --progress-bg: rgba(130, 150, 255, 0.16);
     --returned: #ffc77a;
     --returned-bg: rgba(255, 190, 100, 0.14);
@@ -131,9 +133,10 @@
   --blob-3: #c932e6;
   --blob-4: #2f54ff;
   --blob-opacity: 0.5;
-  --grain-opacity: 0.07;
   --glass: rgba(18, 22, 52, 0.6);
-  --glass-strong: rgba(16, 20, 48, 0.94);
+  --glass-strong: rgba(16, 20, 48, 0.96);
+  --glass-sheen: rgba(255, 255, 255, 0.055);
+  --bar: rgba(15, 19, 46, 0.95);
   --glass-solid: #141a3d;
   --sticky-bg: #141a3b;
   --edge-hi: rgba(255, 255, 255, 0.3);
@@ -147,7 +150,7 @@
   --text: #f3f5ff;
   --text-2: #cdd1f2;
   --muted: #aab0d8;
-  --accent: #a594ff;
+  --accent: #b0a3ff;
   --accent-hover: #bcb0ff;
   --accent-text: #0b0d26;
   --accent-soft: rgba(165, 148, 255, 0.16);
@@ -165,10 +168,10 @@
   --heat: #a594ff;
   --good: #62e8a9;
   --good-bg: rgba(98, 232, 169, 0.14);
-  --bad: #ff8fab;
+  --bad: #ffa6bb;
   --bad-bg: rgba(255, 143, 171, 0.14);
   --neutral-bg: rgba(200, 205, 255, 0.1);
-  --progress: #9fb2ff;
+  --progress: #b4c2ff;
   --progress-bg: rgba(130, 150, 255, 0.16);
   --returned: #ffc77a;
   --returned-bg: rgba(255, 190, 100, 0.14);
@@ -317,7 +320,8 @@ kbd {
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-  background: var(--bg);
+  /* Grain is part of the base layer and of the tiles (painted once), not an extra full-screen layer. */
+  background: var(--grain), var(--bg);
 }
 
 .aurora__blob {
@@ -333,36 +337,30 @@ kbd {
   top: -24vmax;
   left: -18vmax;
   background: radial-gradient(closest-side, var(--blob-1), transparent);
-  animation: drift-1 38s ease-in-out infinite alternate;
+  animation: drift-1 38s steps(380) infinite alternate;
 }
 
 .aurora__blob--2 {
   top: -10vmax;
   right: -26vmax;
   background: radial-gradient(closest-side, var(--blob-2), transparent);
-  animation: drift-2 46s ease-in-out infinite alternate;
+  animation: drift-2 46s steps(460) infinite alternate;
 }
 
 .aurora__blob--3 {
   bottom: -30vmax;
   left: 10vmax;
   background: radial-gradient(closest-side, var(--blob-3), transparent);
-  animation: drift-3 52s ease-in-out infinite alternate;
+  animation: drift-3 52s steps(520) infinite alternate;
 }
 
 .aurora__blob--4 {
   bottom: -26vmax;
   right: -14vmax;
   background: radial-gradient(closest-side, var(--blob-4), transparent);
-  animation: drift-4 42s ease-in-out infinite alternate;
+  animation: drift-4 42s steps(420) infinite alternate;
 }
 
-.aurora__grain {
-  position: absolute;
-  inset: 0;
-  opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
 
 @keyframes drift-1 {
   to {
@@ -398,53 +396,46 @@ kbd {
 /* =========================================================
    Glass surfaces
    ========================================================= */
+/*
+ * Tiles are "glass" without backdrop-filter: the aurora behind them is already a soft gradient,
+ * so a translucent fill with a light sheen, a bevelled 1px edge (inset shadows) and the global
+ * grain read the same, but nothing has to be re-blurred while the page scrolls or the background moves.
+ */
 .glass-bar,
-.tile,
-.glass-pop {
-  background: var(--glass);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(170%);
-  backdrop-filter: blur(var(--glass-blur)) saturate(170%);
-}
-
-.glass-pop {
-  background: var(--glass-strong);
-  border: 1px solid var(--edge-mid);
-  box-shadow: var(--shadow-hover);
+.tile {
+  background:
+    linear-gradient(155deg, var(--glass-sheen), transparent 38%),
+    var(--grain),
+    var(--glass);
+  box-shadow:
+    var(--shadow),
+    inset 1px 1px 0 var(--edge-hi),
+    inset -1px -1px 0 var(--edge-lo),
+    0 0 0 1px var(--ring);
 }
 
 .glass-bar {
   position: relative;
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow), inset 0 1px 0 var(--inner-hi), 0 0 0 1px var(--ring);
+  background:
+    linear-gradient(155deg, var(--glass-sheen), transparent 38%),
+    var(--bar);
 }
 
-.glass-bar::before,
-.tile::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(145deg, var(--edge-hi), var(--edge-mid) 35%, var(--edge-lo) 65%, var(--edge-mid));
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass-bar,
-  .tile,
-  .glass-pop {
-    background: var(--glass-solid);
-  }
+/*
+ * Popovers and tooltips are nearly opaque, so a backdrop blur would barely show; skipping it
+ * also avoids a one-off GPU shader compile the first time a list opens.
+ */
+.glass-pop {
+  background:
+    linear-gradient(155deg, var(--glass-sheen), transparent 45%),
+    var(--glass-strong);
+  border: 1px solid var(--edge-mid);
+  box-shadow: var(--shadow-hover);
 }
 
 @media (max-width: 767px) {
   :root {
-    --glass-blur: 14px;
     --gap: 14px;
   }
 }
@@ -522,12 +513,23 @@ kbd {
   color: var(--accent);
 }
 
-.sidebar__pill {
+.sidebar__list {
+  position: relative;
+}
+
+/* One highlight slid to the active item: transform only, no layout measuring. */
+.sidebar__indicator {
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
+  left: 0;
+  top: 0;
+  width: calc((100% - 12px) / 4);
+  height: 100%;
+  border-radius: 16px;
   background: var(--accent-soft);
   box-shadow: inset 0 0 0 1px var(--edge-mid);
+  transform: translate3d(calc(var(--active, 0) * (100% + 4px)), 0, 0);
+  transition: transform 0.45s var(--ease-out);
+  pointer-events: none;
 }
 
 @media (min-width: 1024px) {
@@ -555,8 +557,16 @@ kbd {
   }
 
   .sidebar__link {
-    padding: 11px 2px 9px;
+    height: 62px;
+    align-content: center;
+    padding: 0 2px;
     font-size: 11px;
+  }
+
+  .sidebar__indicator {
+    width: 100%;
+    height: 62px;
+    transform: translate3d(0, calc(var(--active, 0) * (100% + 6px)), 0);
   }
 }
 
@@ -1072,26 +1082,53 @@ kbd {
   min-width: 0;
   padding: 22px 24px;
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow), inset 0 1px 0 var(--inner-hi), 0 0 0 1px var(--ring);
-  transition: transform 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out);
+  transition: transform 0.4s var(--ease-out);
 }
 
+/* Stronger shadow for hover, faded in with opacity only (no box-shadow animation). */
 .tile::after {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: -2;
+  border-radius: inherit;
+  box-shadow: var(--shadow-hover);
+  opacity: 0;
+  transition: opacity 0.4s var(--ease-out);
+  pointer-events: none;
+}
+
+/* Pointer light: one pre-painted gradient disc per tile, moved with transform only. */
+.tile__fx {
+  position: absolute;
+  inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: radial-gradient(520px circle at var(--mx, 50%) var(--my, -30%), var(--spot), transparent 42%);
-  opacity: 0;
-  transition: opacity 0.4s ease;
+  overflow: hidden;
   pointer-events: none;
+}
+
+.tile__spot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 480px;
+  height: 480px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--spot), transparent);
+  opacity: 0;
+  transform: translate(-9999px, -9999px);
+  transition: opacity 0.35s ease;
+}
+
+.tile.is-lit .tile__spot {
+  will-change: transform;
+  opacity: 1;
 }
 
 @media (hover: hover) {
   .tile:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-hover), inset 0 1px 0 var(--inner-hi), 0 0 0 1px var(--ring);
+    transform: translate3d(0, -3px, 0);
   }
 
   .tile:hover::after {
@@ -1249,20 +1286,26 @@ kbd {
   overflow: visible;
 }
 
+/* Animations fill backwards only, so nothing stays animated (and composited) after they end. */
 .sparkline__line {
   stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: draw 1.2s var(--ease-out) 0.25s forwards;
+  stroke-dashoffset: 0;
+  animation: draw 1.2s var(--ease-out) 0.25s backwards;
 }
 
 .sparkline__area {
-  opacity: 0;
-  animation: fade-in 0.9s ease 0.6s forwards;
+  animation: appear 0.9s ease 0.6s backwards;
 }
 
 @keyframes draw {
-  to {
-    stroke-dashoffset: 0;
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
   }
 }
 
@@ -2204,9 +2247,7 @@ kbd {
   top: 0;
   z-index: 2;
   padding: 0;
-  background: var(--glass-strong);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  background: var(--sticky-bg);
 }
 
 .orders__table tbody tr > * {
@@ -2228,8 +2269,6 @@ kbd {
   .orders__table tbody .sticky-col,
   .orders__table thead .sticky-col {
     background: var(--sticky-bg);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
   }
 
   .orders__table tbody tr:hover > .sticky-col {
@@ -2553,18 +2592,14 @@ kbd {
   opacity: 0.22;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .tile-wrap {
-    animation: tile-in 0.8s var(--ease-out) calc(var(--i, 0) * 70ms) backwards;
-  }
+/* Tiles wait (invisible, no layout change) until their grid first enters the viewport, then play once. */
+.bento:not(.is-in) > .tile-wrap {
+  opacity: 0;
+}
 
-  /* Later sections reveal as they scroll in, driven by the scroll position (no JS). */
-  @supports (animation-timeline: view()) {
-    .dash-section:not(#przeglad) .tile-wrap {
-      animation: tile-in linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry calc(40% + var(--i, 0) * 6%);
-    }
+@media (prefers-reduced-motion: no-preference) {
+  .bento.is-in > .tile-wrap {
+    animation: tile-in 0.8s var(--ease-out) calc(var(--i, 0) * 70ms) backwards;
   }
 
   .row-in {
@@ -2597,7 +2632,7 @@ kbd {
   }
 
   /* Without motion the tiles still fade in, but do not move. */
-  .tile-wrap {
+  .bento.is-in > .tile-wrap {
     animation: fade-in 0.4s ease backwards;
   }
 
@@ -2646,4 +2681,29 @@ kbd {
 .leaders__summary-value {
   font-weight: 700;
   color: var(--text);
+}
+
+/* Background drift pauses during scrolling (class set by a passive scroll listener). */
+.aurora.is-scrolling .aurora__blob {
+  animation-play-state: paused;
+}
+
+/* Tiles do layout and style work in isolation from the rest of the page. */
+.tile {
+  contain: layout style;
+}
+
+/*
+ * While the page scrolls under a still cursor, one transparent layer takes the pointer, so no tile
+ * hover, spotlight or chart tooltip reacts. Toggling a single element keeps style recalculation tiny.
+ */
+.scroll-shield {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: none;
+}
+
+.scroll-shield.is-on {
+  display: block;
 }

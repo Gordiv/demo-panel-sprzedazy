@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Delta } from '../lib/aggregate';
 import { AnimatedNumber } from './AnimatedNumber';
 import { DeltaChip } from './DeltaChip';
@@ -23,7 +24,7 @@ interface KpiCardProps {
   className?: string;
 }
 
-export function KpiCard({
+function KpiCardView({
   id,
   label,
   shortLabel,
@@ -68,3 +69,6 @@ export function KpiCard({
     </Tile>
   );
 }
+
+/** Re-renders only when its own data changes (filters, theme), not on unrelated app updates. */
+export const KpiCard = memo(KpiCardView);

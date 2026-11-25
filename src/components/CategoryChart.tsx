@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { memo, type CSSProperties } from 'react';
 import { motion } from 'motion/react';
 import type { Category } from '../data/types';
 import type { Share } from '../lib/aggregate';
@@ -14,7 +14,7 @@ interface CategoryChartProps {
 }
 
 /** Ranked horizontal bars; bars grow with a CSS transform, rows slide to their new rank. */
-export function CategoryChart({ data, className }: CategoryChartProps) {
+function CategoryChartView({ data, className }: CategoryChartProps) {
   const animate = useMotionEnabled();
   const sorted = [...data].sort((a, b) => b.revenue - a.revenue);
   const top = sorted[0]?.revenue ?? 0;
@@ -70,3 +70,6 @@ export function CategoryChart({ data, className }: CategoryChartProps) {
     </Tile>
   );
 }
+
+/** Re-renders only when its own data changes (filters, theme), not on unrelated app updates. */
+export const CategoryChart = memo(CategoryChartView);

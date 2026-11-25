@@ -1,6 +1,5 @@
-import { useId } from 'react';
-import { motion } from 'motion/react';
-import { useMotionEnabled } from '../lib/motion';
+import { useId, type CSSProperties } from 'react';
+import { useActiveSection } from '../lib/hooks';
 import { Icon, type IconName } from './Icon';
 
 export interface NavSection {
@@ -11,7 +10,6 @@ export interface NavSection {
 
 interface SidebarProps {
   sections: readonly NavSection[];
-  active: string;
 }
 
 export function LogoMark({ size = 36 }: { size?: number }) {
@@ -32,27 +30,29 @@ export function LogoMark({ size = 36 }: { size?: number }) {
   );
 }
 
-/** Rail on wide screens, floating bottom bar on narrow ones. The pill follows the section in view. */
-export function Sidebar({ sections, active }: SidebarProps) {
-  const animate = useMotionEnabled();
+/**
+ * Rail on wide screens, floating bottom bar on narrow ones. The highlight is one element
+ * slid with a CSS transform to the section in view; nothing is measured while scrolling.
+ */
+export function Sidebar({ sections }: SidebarProps) {
+  const active = useActiveSection(sections.map((s) => s.id));
+  const index = Math.max(0, sections.findIndex((s) => s.id === active));
   return (
     <nav className="sidebar glass-bar" aria-label="Sekcje panelu">
       <div className="sidebar__logo">
         <LogoMark />
       </div>
-      <ul className="sidebar__list">
+      <ul className="sidebar__list" style={{ '--active': index } as CSSProperties}>
+        <li className="sidebar__indicator" aria-hidden="true" />
         {sections.map((s) => {
           const isActive = s.id === active;
           return (
             <li key={s.id}>
-              <a href={`#${s.id}`} className={`sidebar__link${isActive ? ' is-active' : ''}`} aria-current={isActive ? 'location' : undefined}>
-                {isActive ? (
-                  <motion.span
-                    layoutId={animate ? 'nav-pill' : undefined}
-                    className="sidebar__pill"
-                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                  />
-                ) : null}
+              <a
+                href={`#${s.id}`}
+                className={`sidebar__link${isActive ? ' is-active' : ''}`}
+                aria-current={isActive ? 'location' : undefined}
+              >
                 <Icon name={s.icon} size={20} />
                 <span className="sidebar__label">{s.label}</span>
               </a>

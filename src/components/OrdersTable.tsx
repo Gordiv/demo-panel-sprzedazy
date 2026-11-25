@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { motion } from 'motion/react';
 import { useMotionEnabled } from '../lib/motion';
 import { Presence } from './Presence';
@@ -39,7 +39,7 @@ interface OrdersTableProps {
   className?: string;
 }
 
-export function OrdersTable({ orders, periodLabel, className }: OrdersTableProps) {
+function OrdersTableView({ orders, periodLabel, className }: OrdersTableProps) {
   const animate = useMotionEnabled();
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, SEARCH_DELAY_MS);
@@ -233,3 +233,6 @@ export function OrdersTable({ orders, periodLabel, className }: OrdersTableProps
     </Tile>
   );
 }
+
+/** Re-renders only when its own data changes (filters, theme), not on unrelated app updates. */
+export const OrdersTable = memo(OrdersTableView);

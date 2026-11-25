@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { memo, type CSSProperties } from 'react';
 import { motion } from 'motion/react';
 import { Presence } from './Presence';
 import type { Ranked } from '../lib/insights';
@@ -27,7 +27,7 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-export function Leaderboard({ id, title, subtitle, icon, items, total, className }: LeaderboardProps) {
+function LeaderboardView({ id, title, subtitle, icon, items, total, className }: LeaderboardProps) {
   const animate = useMotionEnabled();
   return (
     <Tile className={className} labelledBy={id}>
@@ -85,3 +85,6 @@ export function Leaderboard({ id, title, subtitle, icon, items, total, className
     </Tile>
   );
 }
+
+/** Re-renders only when its own data changes (filters, theme), not on unrelated app updates. */
+export const Leaderboard = memo(LeaderboardView);

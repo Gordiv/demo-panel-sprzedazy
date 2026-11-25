@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { startTransition, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { MotionConfig } from 'motion/react';
 import { ActivityFeed } from './components/ActivityFeed';
@@ -36,7 +36,7 @@ import {
   formatMonthShort,
   formatPercent,
 } from './lib/format';
-import { useActiveSection, useMediaQuery, usePrefersReducedMotion } from './lib/hooks';
+import { useMediaQuery, usePrefersReducedMotion } from './lib/hooks';
 import { goalProgress, kpiSparklines, monthlyGoals, recentOrders, salesHeatmap, topBy, type PlanInputs } from './lib/insights';
 import { useMotionEnabled } from './lib/motion';
 import { readStoredTheme, storeTheme, type Theme } from './lib/theme';
@@ -51,7 +51,35 @@ const SECTIONS: readonly NavSection[] = [
   { id: 'kanaly', label: 'Kanały', icon: 'channels' },
   { id: 'zamowienia', label: 'Zamówienia', icon: 'orders' },
 ];
-const SECTION_IDS = SECTIONS.map((s) => s.id);
+
+/** Everything the dashboard shows for one filter state (pure and cheap; rendering is the costly part). */
+function buildView(filters: FilterState) {
+  const periods = getPeriods(DATA_END_MONTH, filters.months);
+  const current = filterOrders(ORDERS, filters, periods.current);
+  const previous = filterOrders(ORDERS, filters, periods.previous);
+  const kpis = computeKpis(current, previous);
+  const goals = monthlyGoals(current, periods.current, filters, PLAN);
+  return {
+    periods,
+    current,
+    previousCount: previous.length,
+    kpis,
+    spark: kpiSparklines(bucketSeries(current, periods.current, filters.months <= 6 ? 'week' : 'month')),
+    heroGranularity: filters.months <= 3 ? ('week' as const) : ('month' as const),
+    series: timeSeries(current, previous, periods, filters.months <= 3 ? 'week' : 'month'),
+    goal: goalProgress(
+      kpis.revenue.current ?? 0,
+      goals.reduce((s, g) => s + g.target, 0),
+    ),
+    goals,
+    categories: revenueByCategory(current),
+    channels: revenueByChannel(current),
+    heatmap: salesHeatmap(current),
+    topClients: topBy(current, (o) => o.client, 5),
+    topProducts: topBy(current, (o) => o.product, 5, (o) => o.category),
+    recent: recentOrders(current, 6),
+  };
+}
 
 function isTyping(target: EventTarget | null): boolean {
   return (
@@ -67,7 +95,6 @@ export default function App() {
   const theme: Theme = storedTheme ?? (systemDark ? 'dark' : 'light');
   const reducedMotion = usePrefersReducedMotion();
   const motionOn = useMotionEnabled();
-  const active = useActiveSection(SECTION_IDS);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -107,35 +134,16 @@ export default function App() {
   // Controls update at once; the heavy recalculation and chart re-render follow as an interruptible update.
   const shown = useDeferredValue(filters);
 
-  const periods = useMemo(() => getPeriods(DATA_END_MONTH, shown.months), [shown.months]);
+  // The sections below the overview follow one commit later, so a filter change is spread over
+  // two shorter frames instead of one long one.
+  const [late, setLate] = useState(shown);
+  useEffect(() => {
+    if (late !== shown) startTransition(() => setLate(shown));
+  }, [shown, late]);
 
-  const view = useMemo(() => {
-    const current = filterOrders(ORDERS, shown, periods.current);
-    const previous = filterOrders(ORDERS, shown, periods.previous);
-    const kpis = computeKpis(current, previous);
-    const goals = monthlyGoals(current, periods.current, shown, PLAN);
-    return {
-      current,
-      previousCount: previous.length,
-      kpis,
-      spark: kpiSparklines(bucketSeries(current, periods.current, shown.months <= 6 ? 'week' : 'month')),
-      heroGranularity: shown.months <= 3 ? ('week' as const) : ('month' as const),
-      series: timeSeries(current, previous, periods, shown.months <= 3 ? 'week' : 'month'),
-      goal: goalProgress(
-        kpis.revenue.current ?? 0,
-        goals.reduce((s, g) => s + g.target, 0),
-      ),
-      goals,
-      categories: revenueByCategory(current),
-      channels: revenueByChannel(current),
-      heatmap: salesHeatmap(current),
-      topClients: topBy(current, (o) => o.client, 5),
-      topProducts: topBy(current, (o) => o.product, 5, (o) => o.category),
-      recent: recentOrders(current, 6),
-    };
-  }, [shown, periods]);
-
-  const { kpis } = view;
+  const view = useMemo(() => buildView(shown), [shown]);
+  const lateView = useMemo(() => buildView(late), [late]);
+  const { kpis, periods } = view;
   const isDefault =
     filters.months === DEFAULT_FILTERS.months &&
     filters.category === DEFAULT_FILTERS.category &&
@@ -150,7 +158,8 @@ export default function App() {
       <a className="skip-link" href="#main">
         Przejdź do treści
       </a>
-      <Sidebar sections={SECTIONS} active={active} />
+      {/* The sidebar tracks the visible section itself, so scrolling never re-renders the dashboard. */}
+      <Sidebar sections={SECTIONS} />
 
       <div className="shell">
         <header className="topbar glass-bar">
@@ -270,15 +279,15 @@ export default function App() {
               <p className="section-meta">Struktura sprzedaży w wybranym okresie</p>
             </div>
             <Bento>
-              <CategoryChart className="span-7" data={view.categories} />
+              <CategoryChart className="span-7" data={lateView.categories} />
               <Leaderboard
                 id="top-products-title"
                 className="span-5"
                 title="Top 5 produktów"
                 subtitle="Według przychodu"
                 icon="box"
-                items={view.topProducts}
-                total={kpis.revenue.current ?? 0}
+                items={lateView.topProducts}
+                total={lateView.kpis.revenue.current ?? 0}
               />
             </Bento>
           </section>
@@ -291,8 +300,8 @@ export default function App() {
               <p className="section-meta">Gdzie i kiedy klienci składają zamówienia</p>
             </div>
             <Bento>
-              <ChannelChart className="span-5" data={view.channels} />
-              <Heatmap className="span-7" data={view.heatmap} />
+              <ChannelChart className="span-5" data={lateView.channels} />
+              <Heatmap className="span-7" data={lateView.heatmap} />
             </Bento>
           </section>
 
@@ -310,14 +319,14 @@ export default function App() {
                 title="Top 5 klientów"
                 subtitle="Według przychodu w okresie"
                 icon="users"
-                items={view.topClients}
-                total={kpis.revenue.current ?? 0}
+                items={lateView.topClients}
+                total={lateView.kpis.revenue.current ?? 0}
               />
-              <ActivityFeed className="span-7" orders={view.recent} today={DATA_END_DATE} />
+              <ActivityFeed className="span-7" orders={lateView.recent} today={DATA_END_DATE} />
               <OrdersTable
                 className="span-12"
-                orders={view.current}
-                periodLabel={`${periods.current.start}_${periods.current.end}`}
+                orders={lateView.current}
+                periodLabel={`${lateView.periods.current.start}_${lateView.periods.current.end}`}
               />
             </Bento>
           </section>

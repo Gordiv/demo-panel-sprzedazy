@@ -1,4 +1,4 @@
-import { useState, type PointerEvent } from 'react';
+import { memo, useState, type PointerEvent } from 'react';
 import { HOUR_BLOCK, HOUR_BLOCKS, type HeatCell, type Heatmap as HeatmapData } from '../lib/insights';
 import {
   WEEKDAYS_LONG,
@@ -27,7 +27,7 @@ function level(orders: number, max: number): number {
   return max > 0 ? Math.pow(orders / max, 0.75) : 0;
 }
 
-export function Heatmap({ data, className }: HeatmapProps) {
+function HeatmapView({ data, className }: HeatmapProps) {
   const [hover, setHover] = useState<Hover | null>(null);
   const peak = data.peak;
 
@@ -113,3 +113,6 @@ export function Heatmap({ data, className }: HeatmapProps) {
     </Tile>
   );
 }
+
+/** Re-renders only when its own data changes (filters, theme), not on unrelated app updates. */
+export const Heatmap = memo(HeatmapView);

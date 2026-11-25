@@ -1,4 +1,4 @@
-import { useId, type CSSProperties } from 'react';
+import { memo, useId, type CSSProperties } from 'react';
 import type { GoalProgress, MonthGoal } from '../lib/insights';
 import { formatCurrency, formatMonthLong, formatMonthName, formatPercent, formatWholePercent } from '../lib/format';
 import { AnimatedNumber } from './AnimatedNumber';
@@ -17,7 +17,7 @@ const SIZE = 168;
 const STROKE = 14;
 const R = (SIZE - STROKE) / 2;
 
-export function GoalRing({ goal, months, filtered, className }: GoalRingProps) {
+function GoalRingView({ goal, months, filtered, className }: GoalRingProps) {
   const uid = useId().replace(/:/g, '');
   const ratio = goal.ratio ?? 0;
   const met = ratio >= 1;
@@ -120,3 +120,6 @@ export function GoalRing({ goal, months, filtered, className }: GoalRingProps) {
     </Tile>
   );
 }
+
+/** Re-renders only when its own data changes (filters, theme), not on unrelated app updates. */
+export const GoalRing = memo(GoalRingView);
