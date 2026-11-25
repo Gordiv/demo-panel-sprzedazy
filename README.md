@@ -36,7 +36,10 @@ z eksportem. Całość działa w przeglądarce, bez serwera i bez zewnętrznych 
   tabel, „Pokaż dane w tabeli” pod każdym wykresem, widoczny fokus, kontrast min. 4,5:1 także w najgorszym
   miejscu tła, znaczenie nigdy nie tylko kolorem, `prefers-reduced-motion` (animacje zamieniają się w
   natychmiastowe zmiany lub krótkie przenikanie).
-- Animacje oparte na `transform` i `opacity`; liczniki zapisują tekst bez przerysowywania całego widoku.
+- **Płynność**: efekt szkła bez kosztownego rozmycia tła, animacje oparte na `transform` i `opacity`,
+  tło zatrzymuje się na czas przewijania, a poświata za kursorem przesuwa jedną warstwę bez
+  przerysowywania kafelka. Liczniki zapisują tekst bez przerysowywania całego widoku, a zmiana filtrów
+  odświeża widok w dwóch krótkich krokach zamiast jednego długiego.
 
 ## Uruchomienie
 
